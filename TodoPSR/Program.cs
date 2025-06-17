@@ -22,51 +22,51 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-//Para un GET en la ruta "/todoitems", 
-app.MapGet("/todoitems", (TodoDb db) =>
-    db.Todos.ToList());
+// GET: Todos los ítems
+app.MapGet("/todoitems", async (TodoDb db) =>
+    Results.Ok(await db.Todos.ToListAsync()));
 
-app.MapGet("/todoitems/complete", (TodoDb db) =>
-    db.Todos.Where(t => t.IsComplete).ToList());
+// GET: Ítems completados
+app.MapGet("/todoitems/complete", async (TodoDb db) =>
+    Results.Ok(await db.Todos.Where(t => t.IsComplete).ToListAsync()));
 
-app.MapGet("/todoitems/{id}", (int id, TodoDb db) =>
-    db.Todos.Find(id)
-        is Todo todo
-            ? Results.Ok(todo)
-            : Results.NotFound());
+// GET: Ítem por ID
+app.MapGet("/todoitems/{id}", async (int id, TodoDb db) =>
+{
+    var todo = await db.Todos.FindAsync(id);
+    return todo is not null ? Results.Ok(todo) : Results.NotFound();
+});
 
-app.MapPost("/todoitems", (Todo todo, TodoDb db) =>
+// POST: Crear nuevo ítem
+app.MapPost("/todoitems", async (Todo todo, TodoDb db) =>
 {
     db.Todos.Add(todo);
-    db.SaveChanges();
-
+    await db.SaveChangesAsync();
     return Results.Created($"/todoitems/{todo.Id}", todo);
 });
 
-app.MapPut("/todoitems/{id}", (int id, Todo inputTodo, TodoDb db) =>
+// PUT: Actualizar ítem
+app.MapPut("/todoitems/{id}", async (int id, Todo inputTodo, TodoDb db) =>
 {
-    var todo = db.Todos.Find(id);
-
+    var todo = await db.Todos.FindAsync(id);
     if (todo is null) return Results.NotFound();
 
     todo.Name = inputTodo.Name;
     todo.IsComplete = inputTodo.IsComplete;
 
-    db.SaveChanges();
-
+    await db.SaveChangesAsync();
     return Results.NoContent();
 });
 
-app.MapDelete("/todoitems/{id}", (int id, TodoDb db) =>
+// DELETE: Eliminar ítem
+app.MapDelete("/todoitems/{id}", async (int id, TodoDb db) =>
 {
-    if (db.Todos.Find(id) is Todo todo)
-    {
-        db.Todos.Remove(todo);
-        db.SaveChanges();
-        return Results.NoContent();
-    }
+    var todo = await db.Todos.FindAsync(id);
+    if (todo is null) return Results.NotFound();
 
-    return Results.NotFound();
+    db.Todos.Remove(todo);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
 });
 
 app.Run();
